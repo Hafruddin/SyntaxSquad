@@ -1,9 +1,0 @@
-{
-  "name": "forge-logistics-root",
-  "version": "1.0.0",
-  "private": true,
-  "description": "FORGE: Forward Operational Resource & Logistics Grid Engine (SIH 2026)",
-  "scripts": {
-    "build": "cd frontend && npm install && npm run build"
-  }
-}
