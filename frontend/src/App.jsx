@@ -29,17 +29,21 @@ import {
   INITIAL_SHIPMENTS,
   INITIAL_ROUTES,
   INITIAL_RECOMMENDATIONS,
-  INITIAL_STOCKOUTS
+  INITIAL_STOCKOUTS,
+  INITIAL_ACTIVITY_FEED
 } from './data/mockData';
+
+import { formatISTDateTime, formatISTTime } from './utils/formatters';
 
 export default function App() {
   // Navigation State
   const [currentView, setCurrentView] = useState('DASHBOARD');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Role-Based Access State
   const [currentRole, setCurrentRole] = useState('COMMANDER'); // COMMANDER, LOGISTICS_OFFICER, DRIVER, FORWARD_OPERATOR
 
-  // Global Data State (Pre-populated with rich demo data for instant load on Netlify / local)
+  // Global Data State (Pre-populated with rich canonical demo data for instant load on Netlify / local)
   const [kpis, setKpis] = useState(INITIAL_KPIS);
   const [locations, setLocations] = useState(INITIAL_LOCATIONS);
   const [inventory, setInventory] = useState(INITIAL_INVENTORY);
@@ -48,6 +52,7 @@ export default function App() {
   const [routes, setRoutes] = useState(INITIAL_ROUTES);
   const [recommendations, setRecommendations] = useState(INITIAL_RECOMMENDATIONS);
   const [stockouts, setStockouts] = useState(INITIAL_STOCKOUTS);
+  const [activityFeed, setActivityFeed] = useState(INITIAL_ACTIVITY_FEED);
 
   // Modals & UI Toggles
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -55,7 +60,9 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [fontSize, setFontSize] = useState('md'); // sm, md, lg
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString() + ' IST');
+  
+  // Issue 6: Standardized 24-hour IST clock with date
+  const [currentTime, setCurrentTime] = useState(formatISTDateTime(new Date()));
 
   // Load backend data if available, with graceful fallback
   const fetchData = async () => {
@@ -95,27 +102,131 @@ export default function App() {
       if (Array.isArray(recRes) && recRes.length > 0) setRecommendations(recRes);
       if (Array.isArray(stockRes) && stockRes.length > 0) setStockouts(stockRes);
     } catch (err) {
-      console.warn("Using built-in high-fidelity FORGE dataset", err);
+      console.warn("Using built-in canonical FORGE dataset", err);
     }
   };
 
   useEffect(() => {
     fetchData();
     const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString() + ' IST');
+      setCurrentTime(formatISTDateTime(new Date()));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // Issue 4: Approve Recommendation
   const handleApproveRecommendation = async (recId) => {
     try {
       await fetch(`/api/recommendations/${recId}/approve`, { method: 'POST' });
     } catch (err) {
       console.warn("Local approval mode", err);
     }
+    
+    const nowIST = formatISTTime(new Date());
     setRecommendations((prev) =>
-      prev.map((r) => (r.id === recId ? { ...r, status: 'APPROVED' } : r))
+      prev.map((r) => (r.id === recId ? {
+        ...r,
+        status: 'APPROVED',
+        approved_at: `06 Oct 2026 • ${nowIST}`,
+        approved_by: 'Col. Ranjit Sharma (Commander)'
+      } : r))
     );
+
+    // Update activity feed with approval event
+    setActivityFeed((prev) => [
+      {
+        eventId: `EVT-APP-${Date.now()}`,
+        raw_timestamp: new Date().toISOString(),
+        time: nowIST,
+        icon: '✅',
+        text: `AI Recommendation #${recId} approved by Col. Ranjit Sharma — Proactive mission authorized.`,
+        role: 'COMMANDER',
+        color: '#16a34a',
+        shipmentId: 3,
+        type: 'APPROVAL'
+      },
+      ...prev
+    ]);
+  };
+
+  // Issue 20: Real-time Demo Scenario Step Execution
+  const handleApplyDemoStep = (actionKey) => {
+    const nowTime = formatISTTime(new Date());
+    switch (actionKey) {
+      case "CONSUMPTION_SURGE":
+      case "STOCKOUT_PREDICTED":
+        setInventory((prev) =>
+          prev.map((it) => it.id === 1 ? { ...it, current_quantity: 280, days_of_supply: 2.9, risk_level: 'CRITICAL' } : it)
+        );
+        setLocations((prev) =>
+          prev.map((l) => l.code === 'FP-KILO' ? { ...l, current_risk_score: 92.0, status: 'CRITICAL' } : l)
+        );
+        setKpis((prev) => ({ ...prev, at_risk_locations_count: 4, inventory_health_pct: 71.4 }));
+        break;
+
+      case "REC_APPROVED":
+        setRecommendations((prev) =>
+          prev.map((r) => r.id === 1 ? { ...r, status: 'APPROVED', approved_at: `06 Oct 2026 • ${nowTime}`, approved_by: 'Col. Ranjit Sharma' } : r)
+        );
+        break;
+
+      case "CONVOY_DISPATCHED":
+        setShipments((prev) =>
+          prev.map((s) => s.id === 3 ? { ...s, status: 'EN_ROUTE', eta_hours: 4.8, eta_formatted: '4h 48m' } : s)
+        );
+        break;
+
+      case "CONNECTIVITY_LOSS":
+      case "OFFLINE_MODE":
+        setVehicles((prev) =>
+          prev.map((v) => v.id === 2 ? { ...v, connectivity_status: 'OFFLINE' } : v)
+        );
+        break;
+
+      case "CONNECTIVITY_RESTORED":
+      case "EVENTS_SYNCED":
+        setVehicles((prev) =>
+          prev.map((v) => v.id === 2 ? { ...v, connectivity_status: 'ONLINE' } : v)
+        );
+        break;
+
+      case "DELIVERY_COMPLETED":
+      case "INVENTORY_RESTORED":
+      case "RISK_REDUCED":
+      case "DEMO_COMPLETE":
+        setShipments((prev) =>
+          prev.map((s) => s.id === 3 ? { ...s, status: 'DELIVERED', eta_hours: 0, eta_formatted: 'Delivered' } : s)
+        );
+        setInventory((prev) =>
+          prev.map((it) => it.id === 1 ? { ...it, current_quantity: 1520, days_of_supply: 16.2, risk_level: 'HEALTHY' } : it)
+        );
+        setLocations((prev) =>
+          prev.map((l) => l.code === 'FP-KILO' ? { ...l, current_risk_score: 18.0, status: 'HEALTHY', days_of_supply_min: 16.2 } : l)
+        );
+        setKpis((prev) => ({
+          ...prev,
+          at_risk_locations_count: 2,
+          inventory_health_pct: 85.7,
+          predicted_shortages_count: 2,
+          active_shipments_count: 2
+        }));
+        break;
+
+      case "RESET":
+        setKpis(INITIAL_KPIS);
+        setLocations(INITIAL_LOCATIONS);
+        setInventory(INITIAL_INVENTORY);
+        setShipments(INITIAL_SHIPMENTS);
+        setVehicles(INITIAL_VEHICLES);
+        setRoutes(INITIAL_ROUTES);
+        setRecommendations(INITIAL_RECOMMENDATIONS);
+        setStockouts(INITIAL_STOCKOUTS);
+        setActivityFeed(INITIAL_ACTIVITY_FEED);
+        break;
+
+      default:
+        break;
+    }
   };
 
   const handleResetDemo = async () => {
@@ -125,14 +236,7 @@ export default function App() {
       } catch (e) {
         console.warn("Local reset", e);
       }
-      setKpis(INITIAL_KPIS);
-      setLocations(INITIAL_LOCATIONS);
-      setInventory(INITIAL_INVENTORY);
-      setShipments(INITIAL_SHIPMENTS);
-      setVehicles(INITIAL_VEHICLES);
-      setRoutes(INITIAL_ROUTES);
-      setRecommendations(INITIAL_RECOMMENDATIONS);
-      setStockouts(INITIAL_STOCKOUTS);
+      handleApplyDemoStep("RESET");
       setCurrentView('DASHBOARD');
     }
   };
@@ -140,16 +244,39 @@ export default function App() {
   const roleNames = {
     COMMANDER: 'Col. Ranjit Sharma (Commander)',
     LOGISTICS_OFFICER: 'Capt. Priya Nair (Logistics)',
-    DRIVER: 'Hav. Rajesh Kumar (Driver)',
+    TRUCK_DRIVER: 'Hav. Rajesh Kumar (Driver)',
     FORWARD_OPERATOR: 'L/Nk. Mohan Das (FP Operator)'
   };
 
+  const navItems = [
+    { id: 'DASHBOARD', label: 'Command Dashboard' },
+    { id: 'MAP', label: 'Logistics Map (GIS)' },
+    { id: 'LOCATIONS', label: 'Forward Locations' },
+    { id: 'INVENTORY', label: 'Inventory Intelligence' },
+    { id: 'FORECAST', label: 'Demand Forecast (ML)' },
+    { id: 'STOCKOUT', label: 'Stockout Predictor', badge: stockouts.filter(s => s.days_remaining <= 5).length },
+    { id: 'ROUTE_PLANNER', label: 'Route Optimizer' },
+    { id: 'SHIPMENTS', label: 'Convoys & Shipments' },
+    { id: 'FLEET', label: 'Fleet Telematics' },
+    { id: 'DRIVER', label: '📱 Driver Cockpit (PWA)', highlight: true },
+    { id: 'SIMULATION', label: 'What-If Simulation' },
+    { id: 'WEATHER', label: 'Weather & Terrain' },
+    { id: 'AI_COPILOT', label: 'AI Advisor' },
+    { id: 'REPORTS', label: 'Reports' },
+    { id: 'AUDIT', label: 'Audit Logs' },
+    { id: 'SETTINGS', label: 'Settings' },
+    { id: 'PROFILE', label: 'Profile' }
+  ];
+
   return (
-    <div style={{
-      fontSize: fontSize === 'sm' ? '14px' : (fontSize === 'lg' ? '18px' : '16px'),
-      filter: highContrast ? 'contrast(125%)' : 'none'
-    }}>
-      {/* 1. OFFICIAL ACCESSIBILITY & UTILITY BAR (EXACT TEMPLATE STYLE) */}
+    <div
+      className="app-root"
+      style={{
+        fontSize: fontSize === 'sm' ? '14px' : (fontSize === 'lg' ? '18px' : '16px'),
+        filter: highContrast ? 'contrast(125%)' : 'none'
+      }}
+    >
+      {/* 1. OFFICIAL ACCESSIBILITY & UTILITY BAR */}
       <div className="utility-bar">
         <div className="container">
           <div className="utility-left">
@@ -158,7 +285,7 @@ export default function App() {
           </div>
 
           <div className="accessibility-links">
-            <span>{currentTime}</span> | 
+            <span style={{ fontWeight: '600' }}>{currentTime}</span> | 
             <a href="#main-content">Skip to Content</a> | 
             <button onClick={() => setHighContrast(!highContrast)}>
               {highContrast ? 'Normal View' : 'High Contrast'}
@@ -216,7 +343,7 @@ export default function App() {
                 onChange={(e) => {
                   const r = e.target.value;
                   setCurrentRole(r);
-                  if (r === 'DRIVER') setCurrentView('DRIVER');
+                  if (r === 'TRUCK_DRIVER') setCurrentView('DRIVER');
                   else if (r === 'FORWARD_OPERATOR') setCurrentView('INVENTORY');
                 }}
               >
@@ -238,7 +365,7 @@ export default function App() {
               <span>{roleNames[currentRole] ? roleNames[currentRole].split(' ')[0] + ' ' + roleNames[currentRole].split(' ')[1] : 'Profile'}</span>
             </button>
 
-            {/* DEMO SCENARIO WALKTHROUGH */}
+            {/* DEMO SCENARIO WALKTHROUGH (Issue 20) */}
             <button className="btn-demo-scenario" onClick={() => setShowDemoModal(true)}>
               ⚡ Run Demo Scenario
             </button>
@@ -251,148 +378,42 @@ export default function App() {
         </div>
       </header>
 
-      {/* 3. NAVIGATION BAR (CIVIC BLUE PALETTE) */}
+      {/* 3. NAVIGATION BAR (Issue 10: Clean Responsive Navigation) */}
       <nav className="navbar">
-        <div className="container">
-          <ul className="nav-links">
-            <li>
-              <button
-                className={currentView === 'DASHBOARD' ? 'active' : ''}
-                onClick={() => setCurrentView('DASHBOARD')}
-              >
-                Command Dashboard
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'MAP' ? 'active' : ''}
-                onClick={() => setCurrentView('MAP')}
-              >
-                Logistics Map (GIS)
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'LOCATIONS' ? 'active' : ''}
-                onClick={() => setCurrentView('LOCATIONS')}
-              >
-                Forward Locations
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'INVENTORY' ? 'active' : ''}
-                onClick={() => setCurrentView('INVENTORY')}
-              >
-                Inventory Intelligence
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'FORECAST' ? 'active' : ''}
-                onClick={() => setCurrentView('FORECAST')}
-              >
-                Demand Forecast (ML)
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'STOCKOUT' ? 'active' : ''}
-                onClick={() => setCurrentView('STOCKOUT')}
-              >
-                Stockout Predictor
-                <span className="badge-count">{stockouts.filter(s => s.days_remaining <= 5).length}</span>
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'ROUTE_PLANNER' ? 'active' : ''}
-                onClick={() => setCurrentView('ROUTE_PLANNER')}
-              >
-                Route Optimizer
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'SHIPMENTS' ? 'active' : ''}
-                onClick={() => setCurrentView('SHIPMENTS')}
-              >
-                Convoys & Shipments
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'FLEET' ? 'active' : ''}
-                onClick={() => setCurrentView('FLEET')}
-              >
-                Fleet Telematics
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'DRIVER' ? 'active' : ''}
-                onClick={() => setCurrentView('DRIVER')}
-                style={{ background: currentView === 'DRIVER' ? '#16a34a' : 'transparent', fontWeight: 'bold' }}
-              >
-                📱 Driver Cockpit (PWA)
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'SIMULATION' ? 'active' : ''}
-                onClick={() => setCurrentView('SIMULATION')}
-              >
-                What-If Simulation
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'WEATHER' ? 'active' : ''}
-                onClick={() => setCurrentView('WEATHER')}
-              >
-                Weather & Terrain
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'AI_COPILOT' ? 'active' : ''}
-                onClick={() => setCurrentView('AI_COPILOT')}
-              >
-                AI Advisor
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'REPORTS' ? 'active' : ''}
-                onClick={() => setCurrentView('REPORTS')}
-              >
-                Reports
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'AUDIT' ? 'active' : ''}
-                onClick={() => setCurrentView('AUDIT')}
-              >
-                Audit Logs
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'SETTINGS' ? 'active' : ''}
-                onClick={() => setCurrentView('SETTINGS')}
-              >
-                Settings
-              </button>
-            </li>
-            <li>
-              <button
-                className={currentView === 'PROFILE' ? 'active' : ''}
-                onClick={() => setCurrentView('PROFILE')}
-              >
-                Profile
-              </button>
-            </li>
+        <div className="container nav-container">
+          {/* Mobile Hamburger Toggle */}
+          <div className="mobile-nav-toggle-bar">
+            <button
+              className="btn-mobile-menu"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle Navigation Menu"
+            >
+              <span style={{ fontSize: '1.2rem' }}>☰</span>
+              <span>Menu: <strong>{currentView}</strong></span>
+            </button>
+            <span style={{ fontSize: '0.75rem', color: '#ff9933', fontWeight: 'bold' }}>
+              &larr; Scroll Tabs &rarr;
+            </span>
+          </div>
+
+          {/* Nav Links */}
+          <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+            {navItems.map((item) => (
+              <li key={item.id}>
+                <button
+                  className={`${currentView === item.id ? 'active' : ''} ${item.highlight ? 'nav-highlight' : ''}`}
+                  onClick={() => {
+                    setCurrentView(item.id);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  {item.label}
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="badge-count">{item.badge}</span>
+                  )}
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
       </nav>
@@ -410,7 +431,7 @@ export default function App() {
 
           <div className="hero-stats">
             <div className="hero-stat-pill" onClick={() => setCurrentView('LOCATIONS')} style={{ cursor: 'pointer' }}>
-              <div className="val">{kpis.total_locations || 10}</div>
+              <div className="val">{kpis.total_locations || locations.length || 10}</div>
               <div className="lbl">Forward Posts</div>
             </div>
             <div className="hero-stat-pill" onClick={() => setCurrentView('INVENTORY')} style={{ cursor: 'pointer' }}>
@@ -422,7 +443,7 @@ export default function App() {
               <div className="lbl">Watch Nodes</div>
             </div>
             <div className="hero-stat-pill" onClick={() => setCurrentView('SHIPMENTS')} style={{ cursor: 'pointer' }}>
-              <div className="val">{kpis.active_shipments_count || 3}</div>
+              <div className="val">{shipments.filter(s => ['EN_ROUTE', 'DELAYED', 'DISPATCHED'].includes(s.status)).length || 3}</div>
               <div className="lbl">Active Convoys</div>
             </div>
           </div>
@@ -440,6 +461,7 @@ export default function App() {
             recommendations={recommendations}
             shipments={shipments}
             stockouts={stockouts}
+            activityFeed={activityFeed}
             onNavigate={(view) => setCurrentView(view)}
             onSelectLocation={(loc) => setSelectedLocation(loc)}
             onApproveRecommendation={handleApproveRecommendation}
@@ -484,6 +506,7 @@ export default function App() {
 
         {currentView === 'STOCKOUT' && (
           <StockoutPredictor
+            stockouts={stockouts}
             onNavigate={(view) => setCurrentView(view)}
           />
         )}
@@ -580,6 +603,7 @@ export default function App() {
           onClose={() => setShowDemoModal(false)}
           onNavigate={(view) => setCurrentView(view)}
           onRefresh={fetchData}
+          onApplyDemoStep={handleApplyDemoStep}
         />
       )}
 
@@ -593,7 +617,7 @@ export default function App() {
         />
       )}
 
-      {/* 7. OFFICIAL GOVERNMENT FOOTER (EXACT TEMPLATE STYLE) */}
+      {/* 7. OFFICIAL GOVERNMENT FOOTER (Issue 11 Protected) */}
       <footer className="main-footer">
         <div className="container">
           <div className="footer-grid">
@@ -632,10 +656,10 @@ export default function App() {
             </div>
 
             <div className="footer-col">
-              <h5>Safety & Compliance Notice</h5>
+              <h5>Safety & Cartographic Notice</h5>
               <p>
                 Designed in compliance with Guidelines for Indian Government Websites (GIGW).
-                Uses strictly non-operational synthetic datasets. No classified or sensitive defence tactical data is modeled.
+                Uses strictly synthetic datasets. Political boundaries aligned to authoritative Survey of India standards.
               </p>
               <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#94a3b8' }}>
                 Security Tier: Academic Prototype Level 3

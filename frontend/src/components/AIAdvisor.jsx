@@ -4,30 +4,30 @@ function getLocalAIResponse(query) {
   const q = query.toLowerCase();
   if (q.includes('location') || q.includes('post') || q.includes('risk') || q.includes('kilo')) {
     return {
-      answer: "Three forward locations are currently under high or critical watch:\n\n1. 🚨 Forward Post Kilo (FP-KILO): Critical risk (86/100). Arctic Diesel down to 3.4 days (320L). Weather: -4.2°C with 42mm sleet.\n2. ⚠️ Forward Post Sierra (FP-SIERRA): Risk 64/100. Fuel at 5.2 days (450L). Weather: Light snow flurries.\n3. ⚠️ Observation Post Tango (OP-TANGO): Risk 72/100. High-altitude glaciated ridge (4800m ASL). Trackway passability restricted.\n\nRecommended Action: Maintain active resupply dispatch for Forward Post Kilo via Route B.",
+      answer: "Three forward locations are currently under high or critical watch:\n\n1. 🚨 Forward Post Kilo (FP-KILO): Critical risk (86/100). Arctic Diesel down to 3.4 days (320L). Weather: -4.2°C with 42mm sleet.\n2. ⚠️ Forward Post Sierra (FP-SIERRA): Risk 64/100. Fuel at 5.2 days (450L). Weather: Light snow flurries.\n3. ⚠️ Observation Post Tango (OP-TANGO): Risk 72/100. High-altitude glaciated ridge (4800m ASL). Trackway passability restricted.\n\nRecommended Action: Maintain active resupply dispatch for Forward Post Kilo via Route B (ETA 4h 48m).",
       suggested: ["Why is Route B recommended over Route A?", "Which supplies may run out this week?", "Show convoy status for FP-KILO"]
     };
   }
   if (q.includes('supply') || q.includes('shortage') || q.includes('run out') || q.includes('stockout') || q.includes('fuel')) {
     return {
-      answer: "Imminent stockout forecast (≤ 5-day horizon):\n\n• Arctic Grade Diesel Fuel (FP-KILO): 320L remaining — 3.4 Days to zero buffer.\n• Kerosene Heating Barrels (FP-KILO): 18 Barrels remaining — 4.5 Days to exhaustion.\n• Emergency Ration Packs (Base Bravo): 240 Packs remaining — 4.8 Days of supply.\n• Arctic Grade Diesel (FP-SIERRA): 450L remaining — 5.2 Days of supply.\n\nCONVOY-NORTH-703 is currently en route carrying 1,200L Arctic Diesel to FP-KILO.",
+      answer: "Imminent stockout forecast (≤ 5-day horizon):\n\n• Arctic Grade Diesel Fuel (FP-KILO): 320L remaining — 3.4 Days to zero buffer.\n• Kerosene Heating Barrels (FP-KILO): 18 Barrels remaining — 4.5 Days to exhaustion.\n• Emergency Ration Packs (Base Bravo): 240 Packs remaining — 4.8 Days of supply.\n\nWatchlist Items (> 5 Days):\n• Arctic Grade Diesel (FP-SIERRA): 450L remaining — 5.2 Days of supply.\n• High-Altitude Trauma Medical Kit (FP-KILO): 12 Kits remaining — 6.0 Days.\n\nCONVOY-NORTH-703 (ARMY-HT-017) is currently en route carrying 1,200L Arctic Diesel to FP-KILO via Route B (ETA 4h 48m).",
       suggested: ["What locations are at high risk?", "Which shipment is delayed?", "Plan resupply convoy"]
     };
   }
-  if (q.includes('shipment') || q.includes('convoy') || q.includes('delayed') || q.includes('truck')) {
+  if (q.includes('shipment') || q.includes('convoy') || q.includes('delayed') || q.includes('truck') || q.includes('eta')) {
     return {
-      answer: "Current Convoy Telemetry Overview:\n\n• CONVOY-NORTH-703: EN ROUTE to Forward Post Kilo carrying 1,200L Diesel. Vehicle: ARMY-HT-017 (Driver: Hav. Rajesh Kumar). ETA: 4.8 Hours on Route B.\n• CONVOY-NORTH-702: DELAYED (+3.5h). Vehicle: ARMY-HT-031 (Nk. Arjun Rao) at Pass Echo km 68 due to mud/slush.\n• CONVOY-NORTH-701: EN ROUTE to Forward Logistics Base 02 (600 Ration Packs). ETA: 2.5 Hours.\n• CONVOY-SOUTH-404: DELIVERED to Base Bravo Tactical Supply Node.",
+      answer: "Current Convoy Telemetry Overview:\n\n• CONVOY-NORTH-703: EN ROUTE to Forward Post Kilo carrying 1,200L Diesel. Vehicle: ARMY-HT-017 (Driver: Hav. Rajesh Kumar). Canonical ETA: 4h 48m on Route B.\n• CONVOY-NORTH-702: DELAYED (+3.5h). Vehicle: ARMY-HT-031 (Nk. Arjun Rao) at Pass Echo km 68 due to mud/slush.\n• CONVOY-NORTH-701: EN ROUTE to Forward Logistics Base 02 (600 Ration Packs). ETA: 2h 30m.\n• CONVOY-SOUTH-404: DELIVERED to Base Bravo Tactical Supply Node.",
       suggested: ["Why is Route B recommended over Route A?", "View driver mobile HUD", "What locations are at high risk?"]
     };
   }
   if (q.includes('route') || q.includes('weather') || q.includes('pass') || q.includes('echo')) {
     return {
-      answer: "Route Optimization Rationale (CSD-01 → FP-KILO):\n\n• Route B (Southern Valley All-Weather Axis): RECOMMENDED (Composite Score: 88/100). Distance: 205km, ETA: 4.8h. Paved and graded hardpack, bypassing active weather.\n• Route A (High Pass Direct Corridor): HAZARD (Score: 61/100). Distance: 180km. Active 42mm precipitation, mud-slush on hairpin switchbacks, +3.5h delay risk.\n\nLogistics recommendation: All heavy convoys are mandated to take Route B.",
+      answer: "Route Optimization Rationale (CSD-01 → FP-KILO):\n\n• Route B (Southern Valley All-Weather Axis): PRIMARY RECOMMENDED (Composite Score: 88/100). Distance: 205km, ETA: 4h 48m. Paved and graded hardpack, bypassing active weather.\n• Route A (High Pass Direct Corridor): HAZARD WARNING (Score: 61/100). Distance: 180km. Active 42mm precipitation, mud-slush on hairpin switchbacks, +3.5h delay risk.\n\nLogistics recommendation: All heavy convoys are mandated to take Route B.",
       suggested: ["Which shipment is delayed?", "What locations are at high risk?", "Run What-If Simulation"]
     };
   }
   return {
-    answer: `FORGE AI Analysis for query "${query}":\n\nAll Northern Sector telemetry indicates active monitoring across 10 forward locations. 5 critical supply items have replenishment actions scheduled. Route B remains the designated primary transit axis due to adverse weather at Pass Echo. CONVOY-NORTH-703 is on track for FP-KILO replenishment.`,
+    answer: `FORGE AI Analysis for query "${query}":\n\nAll Northern Sector telemetry indicates active monitoring across 10 forward locations. 3 critical supply items have replenishment actions scheduled within the ≤5-day window. Route B remains the designated primary transit axis due to adverse weather at Pass Echo. CONVOY-NORTH-703 (ARMY-HT-017) is on track with canonical ETA 4h 48m.`,
     suggested: ["What locations are at high risk?", "Which supplies may run out this week?", "Why is Route B recommended over Route A?"]
   };
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDuration, formatISTTime } from '../utils/formatters';
 
 export default function DriverCockpit({ onSyncComplete }) {
   // Offline State Management
@@ -9,7 +10,7 @@ export default function DriverCockpit({ onSyncComplete }) {
   const [packageDownloaded, setPackageDownloaded] = useState(true);
   const [navStarted, setNavStarted] = useState(false);
 
-  // Active Shipment & Truck Information
+  // Active Shipment & Truck Information (Canonical Data)
   const [shipment, setShipment] = useState({
     id: 3,
     tracking_number: "CONVOY-NORTH-703",
@@ -20,12 +21,13 @@ export default function DriverCockpit({ onSyncComplete }) {
     payload: "1,200L High-Altitude Arctic Diesel",
     remaining_km: 142.5,
     eta_hours: 4.8,
+    eta_formatted: "4h 48m",
     status: "EN_ROUTE",
     route_name: "Route B (Southern Valley All-Weather Axis)",
     checkpoints: [
       { name: "CSD Alpha Outpost Gate", km: 0, status: "CLEARED" },
-      { name: "Valley Transit Checkpost Charlie", km: 68, status: "IN_PROGRESS" },
-      { name: "River Bridge Hardpoint 14", km: 142, status: "PENDING" },
+      { name: "Valley Transit Checkpost Charlie", km: 68, status: "CLEARED" },
+      { name: "River Bridge Hardpoint 14", km: 142, status: "IN_PROGRESS" },
       { name: "Forward Post Kilo Perimeter", km: 205, status: "PENDING" }
     ]
   });
@@ -48,7 +50,11 @@ export default function DriverCockpit({ onSyncComplete }) {
   // Save offline queue whenever it changes
   const saveQueue = (newQ) => {
     setOfflineQueue(newQ);
-    localStorage.setItem('forge_offline_queue', JSON.stringify(newQ));
+    try {
+      localStorage.setItem('forge_offline_queue', JSON.stringify(newQ));
+    } catch (e) {
+      console.warn("LocalStorage save error", e);
+    }
   };
 
   // Record an operational event (stored locally if offline, synced immediately if online)
@@ -82,13 +88,16 @@ export default function DriverCockpit({ onSyncComplete }) {
           })
         });
         if (res.ok) {
-          setLastSyncTime(new Date().toLocaleTimeString() + ' IST');
+          setLastSyncTime(formatISTTime(new Date()));
           setActionNotice(`[ONLINE SYNC] Event ${eventType} transmitted to Command Grid.`);
           setTimeout(() => setActionNotice(''), 4000);
           if (onSyncComplete) onSyncComplete();
+        } else {
+          const updatedQueue = [...offlineQueue, eventObj];
+          saveQueue(updatedQueue);
+          setActionNotice(`Server busy. Event saved locally. (${updatedQueue.length} pending)`);
         }
       } catch (err) {
-        // Fallback to queue if network dropped during request
         const updatedQueue = [...offlineQueue, eventObj];
         saveQueue(updatedQueue);
         setActionNotice(`Network dropped. Event queued locally. (${updatedQueue.length} pending)`);
@@ -113,14 +122,14 @@ export default function DriverCockpit({ onSyncComplete }) {
       });
       if (res.ok) {
         saveQueue([]);
-        setLastSyncTime(new Date().toLocaleTimeString() + ' IST');
+        setLastSyncTime(formatISTTime(new Date()));
         setActionNotice(`✓ All ${offlineQueue.length} offline events synchronized with Command Center!`);
         setTimeout(() => setActionNotice(''), 4500);
         if (onSyncComplete) onSyncComplete();
       }
     } catch (err) {
-      console.error("Sync failed", err);
-      setActionNotice("Sync failed: Backend unreachable. Retrying when signal stabilizes.");
+      console.warn("Sync failed", err);
+      setActionNotice("Sync retry queued: Waiting for signal stabilization.");
     } finally {
       setIsSyncing(false);
     }
@@ -159,7 +168,7 @@ export default function DriverCockpit({ onSyncComplete }) {
             fontWeight: 'bold',
             fontSize: '0.75rem'
           }}>
-            {isOnline ? 'CELLULAR/SATCOM ONLINE' : 'ZERO CELLULAR / OFFLINE'}
+            {isOnline ? 'CELLULAR / SATCOM ONLINE' : 'ZERO CELLULAR / OFFLINE (PWA)'}
           </span>
         </div>
 
@@ -178,10 +187,10 @@ export default function DriverCockpit({ onSyncComplete }) {
             <span style={{ fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', opacity: 0.8 }}>
               DRIVER NAVIGATION COCKPIT (PWA CAB HUD)
             </span>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', margin: '2px 0' }}>
+            <h2 style={{ fontSize: '1.55rem', fontWeight: '800', margin: '2px 0' }}>
               {shipment.truck_id} • {shipment.tracking_number}
             </h2>
-            <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+            <div style={{ fontSize: '0.88rem', opacity: 0.9 }}>
               Driver: <strong>{shipment.driver_name}</strong>
             </div>
           </div>
@@ -228,7 +237,7 @@ export default function DriverCockpit({ onSyncComplete }) {
           borderRadius: '6px',
           marginBottom: '14px',
           fontWeight: '600',
-          fontSize: '0.9rem',
+          fontSize: '0.88rem',
           borderLeft: '5px solid #ff9933'
         }}>
           {actionNotice}
@@ -246,13 +255,14 @@ export default function DriverCockpit({ onSyncComplete }) {
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '0.85rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '0.85rem' }}>
           <div>Origin: <strong>{shipment.origin}</strong></div>
           <div>Destination: <strong>{shipment.destination}</strong></div>
           <div>Axis: <strong>{shipment.route_name}</strong></div>
           <div>Payload: <strong>{shipment.payload}</strong></div>
           <div>Distance Remaining: <strong style={{ color: '#005a9c' }}>{shipment.remaining_km} km</strong></div>
-          <div>Estimated Arrival: <strong style={{ color: '#005a9c' }}>+{shipment.eta_hours} Hours</strong></div>
+          {/* Issue 2: Canonical ETA Duration */}
+          <div>Estimated Arrival: <strong style={{ color: '#005a9c' }}>+{shipment.eta_formatted || formatDuration(shipment.eta_hours)}</strong></div>
         </div>
       </div>
 
@@ -300,7 +310,7 @@ export default function DriverCockpit({ onSyncComplete }) {
           <button
             className="btn-cockpit-action btn-cockpit-complete"
             onClick={() => {
-              recordEvent('CHECKPOINT_PASSED', { checkpoint: 'Valley Transit Checkpost Charlie' });
+              recordEvent('CHECKPOINT_PASSED', { checkpoint: 'River Bridge Hardpoint 14' });
             }}
           >
             <span style={{ fontSize: '1.8rem' }}>📍</span>

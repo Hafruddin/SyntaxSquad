@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDuration } from '../utils/formatters';
 
 const DEFAULT_COMPARISON = {
   summary_reason: "Route B (Southern Valley All-Weather Axis) is designated as the Primary Recommended Axis. Although Route A is 25km shorter (180km vs 205km), severe meteorological precipitation (42mm) and heavy mud-slush accumulation at Pass Echo switchbacks reduces transit speed by 40% and incurs a +3.5h delay risk. Route B delivers a composite safety index of 88/100 compared to 61/100 on Route A.",
@@ -208,7 +209,7 @@ export default function RoutePlanner({ locations = [], onNavigate }) {
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', marginBottom: '14px', fontSize: '0.85rem' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }}>
                     <div>Distance: <strong>{rt.distance_km} km</strong></div>
-                    <div>Base Convoy ETA: <strong>{rt.base_eta_hours} Hours</strong></div>
+                    <div>Base Convoy ETA: <strong>{rt.eta_formatted || formatDuration(rt.base_eta_hours)}</strong></div>
                     <div>Terrain Risk: <strong style={{ color: rt.terrain_risk > 50 ? '#d9381e' : '#16a34a' }}>{rt.terrain_risk}%</strong></div>
                     <div>Weather Risk: <strong style={{ color: rt.weather_risk > 50 ? '#d9381e' : '#16a34a' }}>{rt.weather_risk}%</strong></div>
                   </div>

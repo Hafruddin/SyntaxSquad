@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { formatISTDateTime } from '../utils/formatters';
 
 const EXTRA_LOGS = [
   { id: 101, timestamp: new Date(Date.now() - 300000).toISOString(), user_name: 'Col. Ranjit Sharma', user_role: 'COMMANDER', action: 'APPROVE_RECOMMENDATION', entity_type: 'Recommendation', entity_id: 1, details: 'Approved urgent fuel resupply for Forward Post Kilo. CONVOY-NORTH-703 authorized.' },
   { id: 102, timestamp: new Date(Date.now() - 620000).toISOString(), user_name: 'Capt. Priya Nair', user_role: 'LOGISTICS_OFFICER', action: 'CREATE_SHIPMENT', entity_type: 'Shipment', entity_id: 4, details: 'New convoy planned — 800L Arctic Diesel → FP-KILO via Route B.' },
-  { id: 103, timestamp: new Date(Date.now() - 1800000).toISOString(), user_name: 'Hav. Rajesh Kumar', user_role: 'TRUCK_DRIVER', action: 'CHECKPOINT_CLEARED', entity_type: 'Shipment', entity_id: 3, details: 'CONVOY-NORTH-703 cleared Valley Transit Checkpost Charlie. ETA FP-KILO: 2h40m.' },
+  { id: 103, timestamp: new Date(Date.now() - 1800000).toISOString(), user_name: 'Hav. Rajesh Kumar', user_role: 'TRUCK_DRIVER', action: 'CHECKPOINT_CLEARED', entity_type: 'Shipment', entity_id: 3, details: 'CONVOY-NORTH-703 cleared Valley Transit Checkpost Charlie. Canonical ETA FP-KILO: 4h 48m.' },
   { id: 104, timestamp: new Date(Date.now() - 2700000).toISOString(), user_name: 'Capt. Priya Nair', user_role: 'LOGISTICS_OFFICER', action: 'DISPATCH_CONVOY', entity_type: 'Shipment', entity_id: 3, details: 'Dispatched ARMY-HT-017 carrying 1200L Diesel on Route B (Valley All-Weather Axis).' },
   { id: 105, timestamp: new Date(Date.now() - 4500000).toISOString(), user_name: 'L/Nk. Mohan Das', user_role: 'FORWARD_OPERATOR', action: 'RECORD_CONSUMPTION', entity_type: 'InventoryItem', entity_id: 5, details: 'Logged 94L diesel consumed at Forward Post Kilo. Current balance: 320L (3.4 Days).' },
   { id: 106, timestamp: new Date(Date.now() - 7200000).toISOString(), user_name: 'AI-FORGE', user_role: 'SYSTEM', action: 'GENERATE_RECOMMENDATION', entity_type: 'AIRecommendation', entity_id: 1, details: 'Critical shortage detected: FP-KILO fuel reserves at 3.4 days. Auto-generated URGENT resupply recommendation.' },
@@ -12,14 +13,6 @@ const EXTRA_LOGS = [
   { id: 109, timestamp: new Date(Date.now() - 18000000).toISOString(), user_name: 'Col. Ranjit Sharma', user_role: 'COMMANDER', action: 'WEATHER_ALERT_ACKNOWLEDGED', entity_type: 'WeatherAlert', entity_id: 1, details: 'Commander acknowledged: Pass Echo 42mm precipitation alert. All Route A convoys rerouted to Route B.' },
   { id: 110, timestamp: new Date(Date.now() - 86400000).toISOString(), user_name: 'Capt. Priya Nair', user_role: 'LOGISTICS_OFFICER', action: 'SIMULATION_EXECUTED', entity_type: 'Simulation', entity_id: 1, details: 'What-If simulation: Blizzard scenario +100% demand. Projected 3-day coverage collapse. Pre-position buffers recommended.' },
 ];
-
-function timeAgo(ts) {
-  const diff = (Date.now() - new Date(ts)) / 1000;
-  if (diff < 60) return `${Math.round(diff)}s ago`;
-  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
-  return `${Math.round(diff / 86400)}d ago`;
-}
 
 export default function AuditLogsView() {
   const [logs, setLogs] = useState([]);
@@ -31,14 +24,12 @@ export default function AuditLogsView() {
     fetch('/api/audit')
       .then((res) => res.json())
       .then((data) => {
-        // Merge API logs with rich extra logs
-        const merged = [...EXTRA_LOGS, ...data].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        const merged = [...EXTRA_LOGS, ...(Array.isArray(data) ? data : [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         setLogs(merged);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed fetching audit logs", err);
-        // Show extra logs even if API fails
+        console.warn("Using bundled audit logs", err);
         setLogs([...EXTRA_LOGS].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
         setLoading(false);
       });
@@ -47,8 +38,8 @@ export default function AuditLogsView() {
   const filtered = logs.filter(l => {
     const matchRole = filterRole === 'ALL' || l.user_role === filterRole;
     const matchSearch = !searchTerm || l.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      l.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      l.details.toLowerCase().includes(searchTerm.toLowerCase());
+      (l.user_name && l.user_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (l.details && l.details.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchRole && matchSearch;
   });
 
@@ -76,7 +67,7 @@ export default function AuditLogsView() {
       <div className="section-title">
         <span>Operational Audit Logs & Security Trails</span>
         <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}>
-          Immutable Telemetry & Dispatch Audit Registry
+          Immutable Telemetry & Dispatch Audit Registry (24-Hour IST)
         </span>
       </div>
 
@@ -98,68 +89,73 @@ export default function AuditLogsView() {
 
       <div className="table-container">
         <div className="table-toolbar">
-          <span style={{ fontWeight: '700', color: 'var(--primary-navy)' }}>
-            System Audit Trail ({filtered.length} Events Shown)
-          </span>
+          <div className="search-input-box">
+            <span>🔍</span>
+            <input
+              type="text"
+              placeholder="Search action, officer, details..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
           <div className="filter-group">
-            <div className="search-input-box" style={{ width: '220px' }}>
-              <span>🔍</span>
-              <input
-                type="text"
-                placeholder="Search logs..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <select className="filter-select" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+            <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>Filter Role:</label>
+            <select
+              className="filter-select"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+            >
               <option value="ALL">All Roles</option>
-              <option value="COMMANDER">COMMANDER</option>
-              <option value="LOGISTICS_OFFICER">LOGISTICS OFFICER</option>
-              <option value="TRUCK_DRIVER">TRUCK DRIVER</option>
-              <option value="FORWARD_OPERATOR">FORWARD OPERATOR</option>
-              <option value="SYSTEM">SYSTEM / AI</option>
+              <option value="COMMANDER">Commander</option>
+              <option value="LOGISTICS_OFFICER">Logistics Officer</option>
+              <option value="TRUCK_DRIVER">Truck Driver</option>
+              <option value="FORWARD_OPERATOR">Forward Operator</option>
+              <option value="SYSTEM">AI Engine / System</option>
             </select>
           </div>
         </div>
 
-        <table className="gov-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Officer / Actor</th>
-              <th>Role</th>
-              <th>Action Executed</th>
-              <th>Target Entity</th>
-              <th>Operational Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((l) => (
-              <tr key={l.id}>
-                <td style={{ fontSize: '0.78rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                  <div>{new Date(l.timestamp).toLocaleString('en-IN', { hour12: false })}</div>
-                  <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{timeAgo(l.timestamp)}</div>
-                </td>
-                <td>
-                  <strong>{l.user_name}</strong>
-                </td>
-                <td>
-                  <span className={`badge ${roleColors[l.user_role] || 'badge-low'}`}>
-                    {l.user_role}
-                  </span>
-                </td>
-                <td>
-                  <strong style={{ color: 'var(--primary-navy)', fontSize: '0.82rem' }}>
-                    {actionIcon(l.action)} {l.action.replace(/_/g, ' ')}
-                  </strong>
-                </td>
-                <td>{l.entity_type} #{l.entity_id}</td>
-                <td style={{ fontSize: '0.82rem', color: '#334155', maxWidth: '280px' }}>{l.details}</td>
+        <div className="responsive-table-wrap">
+          <table className="gov-table">
+            <thead>
+              <tr>
+                <th>Event ID</th>
+                <th>IST Timestamp</th>
+                <th>Officer / User</th>
+                <th>Role</th>
+                <th>Action Type</th>
+                <th>Entity Target</th>
+                <th>Audit Trail Details</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((l) => (
+                <tr key={l.id}>
+                  <td><strong>LOG-#{l.id}</strong></td>
+                  {/* Issue 6: Standardized 24-hour IST Timestamp */}
+                  <td style={{ whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                    {formatISTDateTime(l.timestamp)}
+                  </td>
+                  <td><strong>{l.user_name || 'System Operator'}</strong></td>
+                  <td>
+                    <span className={`badge ${roleColors[l.user_role] || 'badge-low'}`}>
+                      {l.user_role}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: '600', fontSize: '0.8rem' }}>
+                      <span>{actionIcon(l.action)}</span>
+                      <span>{l.action}</span>
+                    </span>
+                  </td>
+                  <td><span style={{ fontSize: '0.78rem' }}>{l.entity_type} #{l.entity_id}</span></td>
+                  <td style={{ fontSize: '0.8rem', color: '#334155' }}>{l.details}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

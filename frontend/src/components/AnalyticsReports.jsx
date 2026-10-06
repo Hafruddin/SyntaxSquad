@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatISTDateTime, formatDuration } from '../utils/formatters';
 
 /* Inline SVG Bar Chart */
 function BarChart({ data, labels, title, colorFn }) {
@@ -256,7 +257,7 @@ export default function AnalyticsReports({ kpis, locations, shipments }) {
                 DAILY SECTOR LOGISTICS & SUPPLY CHAIN INTELLIGENCE REPORT
               </h2>
               <div style={{ fontSize: '0.82rem', color: '#334155' }}>
-                Northern Logistics Frontier (Synthetic Academic Sandbox) • Generated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} 14:00 IST
+                Northern Logistics Frontier (Synthetic Academic Sandbox) • Generated: {formatISTDateTime(new Date())}
               </div>
             </div>
 
@@ -282,7 +283,6 @@ export default function AnalyticsReports({ kpis, locations, shipments }) {
                 <tbody>
                   <tr><td><strong>Forward Post Kilo</strong></td><td>Arctic Grade Diesel Fuel (320L)</td><td><strong style={{ color: '#d9381e' }}>3.4 Days</strong></td><td>Within 72 Hours</td><td><span className="badge badge-critical">Convoy Resupply Recommended</span></td></tr>
                   <tr><td><strong>Forward Post Kilo</strong></td><td>Kerosene Heating Barrels (18 Barrels)</td><td><strong style={{ color: '#e65100' }}>4.5 Days</strong></td><td>Within 5 Days</td><td><span className="badge badge-medium">Buffer Monitored</span></td></tr>
-                  <tr><td><strong>Forward Post Sierra</strong></td><td>Arctic Grade Diesel Fuel (450L)</td><td><strong style={{ color: '#e65100' }}>5.2 Days</strong></td><td>Within 6 Days</td><td><span className="badge badge-low">Scheduled Next Cycle</span></td></tr>
                   <tr><td><strong>Base Bravo</strong></td><td>Emergency Ration Packs (240 Packs)</td><td><strong style={{ color: '#e65100' }}>4.8 Days</strong></td><td>Within 5 Days</td><td><span className="badge badge-medium">Under Review</span></td></tr>
                 </tbody>
               </table>
@@ -293,7 +293,7 @@ export default function AnalyticsReports({ kpis, locations, shipments }) {
                 3. Tactical Route & Convoy Directives
               </h4>
               <p style={{ fontSize: '0.86rem', color: '#334155', lineHeight: '1.6' }}>
-                Adverse meteorological radar indicates 42mm precipitation across Pass Echo corridor. All heavy transport dispatches bound for Forward Post Kilo and Base Bravo are ordered diverted to <strong>Route B (Southern Valley All-Weather Axis)</strong>. Route B provides an all-weather paved gradient with an 88/100 composite safety score, negating the +3.5h mud-slush bottleneck observed on Route A. CONVOY-NORTH-703 confirmed en route via Route B. ETA FP-KILO: 4.8 hours.
+                Adverse meteorological radar indicates 42mm precipitation across Pass Echo corridor. All heavy transport dispatches bound for Forward Post Kilo and Base Bravo are ordered diverted to <strong>Route B (Southern Valley All-Weather Axis)</strong>. Route B provides an all-weather paved gradient with an 88/100 composite safety score, negating the +3.5h mud-slush bottleneck observed on Route A. CONVOY-NORTH-703 confirmed en route via Route B. Canonical ETA FP-KILO: 4h 48m (4.8h).
               </p>
             </div>
 

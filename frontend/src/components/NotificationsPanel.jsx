@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 
 const DEMO_NOTIFICATIONS = [
-  { id: 1, type: 'CRITICAL', icon: '🚨', title: 'CRITICAL: FP-KILO Fuel at 3.4 Days', body: 'Arctic Grade Diesel at Forward Post Kilo will be exhausted in approximately 3.4 days. CONVOY-NORTH-703 dispatched. Monitor delivery.', time: '5m ago', read: false },
+  { id: 1, type: 'CRITICAL', icon: '🚨', title: 'CRITICAL: FP-KILO Fuel at 3.4 Days', body: 'Arctic Grade Diesel at Forward Post Kilo will be exhausted in approximately 3.4 days. CONVOY-NORTH-703 dispatched. Canonical ETA: 4h 48m.', time: '5m ago', read: false },
   { id: 2, type: 'WARNING', icon: '🌧️', title: 'Weather Alert: Pass Echo Heavy Rain', body: '42mm precipitation forecast on Route A Pass Echo corridor. All convoys rerouted to Route B. Expected transit delay: +3.5h.', time: '22m ago', read: false },
   { id: 3, type: 'WARNING', icon: '⚠️', title: 'CONVOY-NORTH-702 Delayed +3.5h', body: 'Vehicle ARMY-HT-031 reporting road obstruction at Pass Echo km 68. Slush/mud blockage. Driver requesting reroute instructions.', time: '1h ago', read: false },
   { id: 4, type: 'INFO', icon: '✅', title: 'AI Recommendation #1 Approved', body: 'Col. Ranjit Sharma approved urgent fuel resupply for FP-KILO. CONVOY-NORTH-703 authorized and dispatched via Route B.', time: '2h ago', read: true },
-  { id: 5, type: 'INFO', icon: '📍', title: 'CONVOY-NORTH-703 — Checkpoint Cleared', body: 'ARMY-HT-017 cleared Valley Transit Checkpost Charlie. Remaining: 142km. ETA Forward Post Kilo: 2h40m.', time: '3h ago', read: true },
+  { id: 5, type: 'INFO', icon: '📍', title: 'CONVOY-NORTH-703 — Checkpoint Cleared', body: 'ARMY-HT-017 cleared Valley Transit Checkpost Charlie. Remaining: 142km. Canonical ETA Forward Post Kilo: 4h 48m.', time: '3h ago', read: true },
   { id: 6, type: 'SYSTEM', icon: '🤖', title: 'FORGE AI Generated 3 Recommendations', body: 'AI engine identified fuel shortage risk at FP-KILO (CRITICAL), kerosene depletion (HIGH), and Route A hazard (HIGH). Pending officer review.', time: '5h ago', read: true },
   { id: 7, type: 'INFO', icon: '📦', title: 'CONVOY-SOUTH-404 Delivered Successfully', body: 'Medical Supplies delivered to Base Bravo. 240 units received. Inventory updated. Delivery confirmation logged.', time: '1d ago', read: true },
 ];
@@ -26,9 +26,9 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
   return (
     <div style={{
       position: 'fixed', top: 0, right: 0, bottom: 0,
-      width: '420px', background: '#fff',
+      width: '420px', maxWidth: '100vw', background: '#fff',
       boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-      zIndex: 9999, display: 'flex', flexDirection: 'column'
+      zIndex: 2000, display: 'flex', flexDirection: 'column'
     }}>
       {/* Header */}
       <div style={{ background: 'var(--primary-navy)', color: '#fff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
